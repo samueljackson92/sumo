@@ -1,0 +1,14 @@
+version: '3'
+services:
+  mongo:
+    image: "mongo"
+    ports:
+        - "27017:27017"
+  lab:
+    image: "data-science"
+    ports:
+        - "10000:8888"
+    environment:
+        - JUPYTER_LAB_ENABLE=yes
+    volumes:
+        - "${PWD}:/home/jovyan/work" 
