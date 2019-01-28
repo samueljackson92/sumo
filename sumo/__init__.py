@@ -86,3 +86,33 @@ def load_history(db, banzuke_range):
     # history_df.index =history_df.index.droplevel(-1)
     history_df = history_df.reset_index().set_index(['bid', 'day', 'rid'])
     return history_df
+
+
+def load_rikishi(db):
+
+    def parse_weight(column):
+        x = column.str.replace('cm', '').str.replace('kg', '').str.split(' ', expand=True)[[2]]
+        return x
+
+    def parse_height(column):
+        x = column.str.replace('cm', '').str.replace('kg', '').str.split(' ', expand=True)[[0]]
+        return x
+
+    collection = db.rikishi.find({})
+    rikishi = (pd.DataFrame(list(collection))
+                   .dropna(subset=['history'])
+                   .groupby('_id')
+                   .apply(lambda x: pd.concat([pd.DataFrame(y) for y in x['history']], axis=1))
+                   .reset_index()
+                   .rename({'_id': 'rid', 'banzuke': 'bid'}, axis=1)
+                   .assign(rid=lambda x: x.rid.astype(int),
+                           bid=lambda x: x.bid.astype(int))
+                   .set_index(['bid', 'rid'])
+                   .sort_values(['rid', 'bid'])
+                   .drop('level_1', axis=1)
+                   .groupby('rid').apply(lambda x: x.assign(weight=lambda y: y.weight.bfill().ffill()))
+                   .assign(height=lambda x: parse_height(x.weight))
+                   .assign(weight=lambda x: parse_weight(x.weight))
+              )
+    return rikishi
+
